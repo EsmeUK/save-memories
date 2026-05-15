@@ -621,23 +621,74 @@
     let zip = new JSZip();
     let fileMap = new Map();
 
+    // Global prevent default to stop browser from opening dropped files
+    window.addEventListener('dragover', (e) => e.preventDefault(), false);
+    window.addEventListener('drop', (e) => e.preventDefault(), false);
+
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         dropZone.classList.add('dragover');
     });
 
-    dropZone.addEventListener('dragleave', () => {
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         dropZone.classList.remove('dragover');
     });
 
-    dropZone.addEventListener('drop', (e) => {
+    dropZone.addEventListener('drop', async (e) => {
         e.preventDefault();
+        e.stopPropagation();
         dropZone.classList.remove('dragover');
-        const files = Array.from(e.dataTransfer.files);
-        if (files.length > 0) {
-            handleFiles(files);
+        
+        const items = e.dataTransfer.items;
+        if (!items) return;
+
+        statusText.innerText = "Reading folder structure...";
+        progressContainer.style.display = 'block';
+        dropZone.style.display = 'none';
+
+        const files = [];
+        const queue = [];
+
+        for (let i = 0; i < items.length; i++) {
+            const entry = items[i].webkitGetAsEntry();
+            if (entry) {
+                queue.push(traverseEntry(entry));
+            }
+        }
+
+        const results = await Promise.all(queue);
+        const flattenedFiles = results.flat();
+        if (flattenedFiles.length > 0) {
+            handleFiles(flattenedFiles);
         }
     });
+
+    // Helper to recursively walk through dropped folders
+    async function traverseEntry(entry, path = "") {
+        const files = [];
+        if (entry.isFile) {
+            const file = await new Promise((resolve) => entry.file(resolve));
+            // Manually construct the path since dropped files lose webkitRelativePath
+            Object.defineProperty(file, 'fullPath', {
+                value: path + entry.name,
+                writable: false
+            });
+            files.push(file);
+        } else if (entry.isDirectory) {
+            const dirReader = entry.createReader();
+            const entries = await new Promise((resolve) => {
+                dirReader.readEntries(resolve);
+            });
+            for (const subEntry of entries) {
+                const subFiles = await traverseEntry(subEntry, path + entry.name + "/");
+                files.push(...subFiles);
+            }
+        }
+        return files;
+    }
 
     folderInput.addEventListener('change', (e) => {
         const files = Array.from(e.target.files);
@@ -653,9 +704,8 @@
 
         statusText.innerText = "Organizing memories...";
         for (const file of files) {
-            // webkitRelativePath is available for folder inputs
-            // for drag-and-drop of folders, we use the file name as a fallback for the path
-            const path = file.webkitRelativePath || file.name;
+            // Use fullPath for drops, webkitRelativePath for input
+            const path = file.fullPath || file.webkitRelativePath || file.name;
             fileMap.set(path, file);
         }
 
@@ -673,7 +723,8 @@
             const baseHref = baseTag ? baseTag.getAttribute('href') : null;
             
             const imgs = doc.querySelectorAll('img');
-            const htmlDirPath = (htmlFile.webkitRelativePath || htmlFile.name).split('/').slice(0, -1).join('/');
+            const currentFilePath = htmlFile.fullPath || htmlFile.webkitRelativePath || htmlFile.name;
+            const htmlDirPath = currentFilePath.split('/').slice(0, -1).join('/');
 
             imgs.forEach(img => {
                 const src = img.getAttribute('src');

@@ -645,44 +645,71 @@
         const items = e.dataTransfer.items;
         if (!items) return;
 
-        statusText.innerText = "Reading folder structure...";
+        resetApp();
+        statusText.innerText = "Scanning folders...";
         progressContainer.style.display = 'block';
         dropZone.style.display = 'none';
 
         const files = [];
-        const queue = [];
+        const entries = [];
 
         for (let i = 0; i < items.length; i++) {
             const entry = items[i].webkitGetAsEntry();
             if (entry) {
-                queue.push(traverseEntry(entry));
+                entries.push(entry);
             }
         }
 
-        const results = await Promise.all(queue);
-        const flattenedFiles = results.flat();
-        if (flattenedFiles.length > 0) {
-            handleFiles(flattenedFiles);
+        try {
+            for (const entry of entries) {
+                const discovered = await traverseEntry(entry);
+                files.push(...discovered);
+                statusText.innerText = `Found ${files.length} files...`;
+            }
+
+            if (files.length > 0) {
+                handleFiles(files);
+            } else {
+                statusText.innerText = "No files found in that folder.";
+                dropZone.style.display = 'flex';
+            }
+        } catch (err) {
+            console.error("Scanning error:", err);
+            statusText.innerText = "Error reading folder. Please try clicking to browse instead.";
+            dropZone.style.display = 'flex';
         }
     });
 
-    // Helper to recursively walk through dropped folders
+    // Robust recursive folder walker
     async function traverseEntry(entry, path = "") {
         const files = [];
         if (entry.isFile) {
-            const file = await new Promise((resolve) => entry.file(resolve));
-            // Manually construct the path since dropped files lose webkitRelativePath
+            const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+            // Ensure path starts without a leading slash for consistency
+            const fullPath = (path + entry.name).replace(/^\//, '');
             Object.defineProperty(file, 'fullPath', {
-                value: path + entry.name,
+                value: fullPath,
                 writable: false
             });
             files.push(file);
         } else if (entry.isDirectory) {
             const dirReader = entry.createReader();
-            const entries = await new Promise((resolve) => {
-                dirReader.readEntries(resolve);
-            });
-            for (const subEntry of entries) {
+            const allEntries = [];
+            
+            // readEntries must be called repeatedly until it returns an empty array
+            const readBatch = () => {
+                return new Promise((resolve, reject) => {
+                    dirReader.readEntries(resolve, reject);
+                });
+            };
+
+            let batch = await readBatch();
+            while (batch.length > 0) {
+                allEntries.push(...batch);
+                batch = await readBatch();
+            }
+
+            for (const subEntry of allEntries) {
                 const subFiles = await traverseEntry(subEntry, path + entry.name + "/");
                 files.push(...subFiles);
             }
@@ -698,19 +725,19 @@
     });
 
     async function handleFiles(files) {
-        resetApp();
+        // Reset mapping and clear status
+        fileMap.clear();
         progressContainer.style.display = 'block';
         dropZone.style.display = 'none';
-
+        
         statusText.innerText = "Organizing memories...";
         for (const file of files) {
-            // Use fullPath for drops, webkitRelativePath for input
             const path = file.fullPath || file.webkitRelativePath || file.name;
             fileMap.set(path, file);
         }
 
         const htmlFiles = files.filter(f => f.name.endsWith('.html'));
-        statusText.innerText = `Found your files. Finding photos...`;
+        statusText.innerText = `Found ${htmlFiles.length} data files. Searching for photos...`;
 
         const imagePaths = new Set();
         for (let i = 0; i < htmlFiles.length; i++) {
@@ -746,6 +773,12 @@
         }
 
         const uniquePaths = Array.from(imagePaths);
+        if (uniquePaths.length === 0) {
+            statusText.innerText = "No photos found in these files. Make sure you unzipped the export first!";
+            downloadBtn.style.display = 'none';
+            return;
+        }
+
         statusText.innerText = `Almost there! Saving ${uniquePaths.length} photos...`;
 
         for (let i = 0; i < uniquePaths.length; i++) {

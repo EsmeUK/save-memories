@@ -5,26 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- Primary Meta Tags -->
-    <title>Photo Extractor | HTML to JPEG Conversion Tool for Social Media Exports</title>
+    <title>Memory Extractor | Recover Social Media Photos and Videos Privately</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FF8FA3'><path d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/></svg>">
-    <meta name="title" content="Photo Extractor | HTML to JPEG Conversion Tool for Social Media Exports">
-    <meta name="description" content="A specialized tool to convert social media HTML exports into high-quality JPEG photos. Extract and recover your private memories from Facebook and Instagram exports locally and securely.">
-    <meta name="keywords" content="html to jpeg converter, convert facebook html to photos, extract instagram html images, social media photo recovery, download private data, family memory extractor">
-    <meta name="author" content="Social Media Photo Extractor">
+    <meta name="title" content="Memory Extractor | Recover Social Media Photos and Videos Privately">
+    <meta name="description" content="A specialized tool to extract and recover your private photos and videos from social media HTML exports. Converts images to ready-to-use JPEGs and preserves videos locally and securely.">
+    <meta name="keywords" content="html to jpeg converter, convert facebook html to photos, extract instagram videos, social media photo recovery, download private data, family memory extractor">
+    <meta name="author" content="Social Media Memory Extractor">
     <link rel="canonical" href="https://savememories.github.io/">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://savememories.github.io/">
-    <meta property="og:title" content="Photo Extractor | HTML to JPEG Conversion Tool for Social Media Exports">
-    <meta property="og:description" content="Turn your data exports back into a beautiful photo collection. Supporting maternity care with every extraction.">
+    <meta property="og:title" content="Memory Extractor | Recover Social Media Photos and Videos Privately">
+    <meta property="og:description" content="Turn your data exports back into a beautiful photo and video collection. Supporting maternity care with every extraction.">
     <meta property="og:image" content="https://savememories.github.io/social-preview.jpg">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://savememories.github.io/">
-    <meta property="twitter:title" content="Photo Extractor | HTML to JPEG Conversion Tool for Social Media Exports">
-    <meta property="twitter:description" content="Turn your data exports back into a beautiful photo collection. Supporting maternity care with every extraction.">
+    <meta property="twitter:title" content="Memory Extractor | Recover Social Media Photos and Videos Privately">
+    <meta property="twitter:description" content="Turn your data exports back into a beautiful photo and video collection. Supporting maternity care with every extraction.">
     <meta property="twitter:image" content="https://savememories.github.io/social-preview.jpg">
 
     <!-- Schema.org for Google (JSON-LD) -->
@@ -32,10 +32,10 @@
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
-      "name": "Photo Extractor",
+      "name": "Memory Extractor",
       "operatingSystem": "Web Browser",
       "applicationCategory": "MultimediaApplication",
-      "description": "A private tool to extract and convert social media HTML photo links into JPEG files.",
+      "description": "A private tool to extract social media photos and videos from HTML exports, converting images to JPEG.",
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -480,7 +480,7 @@
 
 <div class="container">
     <h1>Save Your Memories</h1>
-    <p class="intro">When you download your data from social media, your photos are often trapped in HTML files that are hard to manage. This tool safely finds your memories and instantly converts them into ready-to-use JPEGs - all without them ever leaving your computer. Simple, private, and in your hands.</p>
+    <p class="intro">When you download your data from social media, your photos and videos are often trapped in HTML files that are hard to manage. This tool safely finds your memories, converting photos into ready-to-use JPEGs and preserving your videos - all without them ever leaving your computer. Simple, private, and in your hands.</p>
 
     <div class="instructions-grid">
         <div class="step">
@@ -511,7 +511,7 @@
         <p id="status-text">Scanning files...</p>
     </div>
 
-    <button id="download-btn" class="btn">✨ Download My Photos (.zip)</button>
+    <button id="download-btn" class="btn">✨ Download My Memories (.zip)</button>
 
     <div class="donation-card">
         <p style="font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 15px; line-height: 1.5;">
@@ -551,7 +551,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     Retrieve your history
                 </h3>
-                <p>Quickly recover your photos and memories directly in your browser.</p>
+                <p>Quickly recover your photos, videos, and memories directly in your browser.</p>
             </div>
             <div class="goal-item">
                 <h3>
@@ -737,9 +737,9 @@
         }
 
         const htmlFiles = files.filter(f => f.name.endsWith('.html'));
-        statusText.innerText = `Found ${htmlFiles.length} data files. Searching for photos...`;
+        statusText.innerText = `Found ${htmlFiles.length} data files. Searching for photos and videos...`;
 
-        const imagePaths = new Set();
+        const mediaPaths = new Set();
         for (let i = 0; i < htmlFiles.length; i++) {
             const htmlFile = htmlFiles[i];
             const content = await htmlFile.text();
@@ -749,54 +749,73 @@
             const baseTag = doc.querySelector('base');
             const baseHref = baseTag ? baseTag.getAttribute('href') : null;
             
-            const imgs = doc.querySelectorAll('img');
+            // Search for images, videos, and links to media
+            const selectors = ['img[src]', 'video[src]', 'source[src]', 'a[href]'];
+            const elements = doc.querySelectorAll(selectors.join(','));
+            
             const currentFilePath = htmlFile.fullPath || htmlFile.webkitRelativePath || htmlFile.name;
             const htmlDirPath = currentFilePath.split('/').slice(0, -1).join('/');
 
-            imgs.forEach(img => {
-                const src = img.getAttribute('src');
-                if (!src || src.startsWith('http') || src.startsWith('data:')) return;
+            elements.forEach(el => {
+                const rawSrc = el.getAttribute('src') || el.getAttribute('href');
+                if (!rawSrc || rawSrc.startsWith('http') || rawSrc.startsWith('data:') || rawSrc.startsWith('#')) return;
+
+                // Only pick up files with media extensions if it's a link
+                if (el.tagName === 'A') {
+                    const ext = rawSrc.toLowerCase().split('.').pop();
+                    const mediaExts = ['jpg', 'jpeg', 'png', 'gif', 'heic', 'heif', 'mp4', 'mov', 'webp'];
+                    if (!mediaExts.includes(ext)) return;
+                }
 
                 let resolvedPath;
                 if (baseHref) {
-                    resolvedPath = resolveRelativePath(htmlDirPath, baseHref + src);
+                    resolvedPath = resolveRelativePath(htmlDirPath, baseHref + rawSrc);
                 } else {
-                    resolvedPath = resolveRelativePath(htmlDirPath, src);
+                    resolvedPath = resolveRelativePath(htmlDirPath, rawSrc);
                 }
                 
                 if (fileMap.has(resolvedPath)) {
-                    imagePaths.add(resolvedPath);
+                    mediaPaths.add(resolvedPath);
                 }
             });
 
             updateProgress((i / htmlFiles.length) * 30);
         }
 
-        const uniquePaths = Array.from(imagePaths);
+        const uniquePaths = Array.from(mediaPaths);
         if (uniquePaths.length === 0) {
-            statusText.innerText = "No photos found in these files. Make sure you unzipped the export first!";
+            statusText.innerText = "No media found in these files. Make sure you unzipped the export first!";
             downloadBtn.style.display = 'none';
             return;
         }
 
-        statusText.innerText = `Almost there! Saving ${uniquePaths.length} photos...`;
+        statusText.innerText = `Saving ${uniquePaths.length} items...`;
 
         for (let i = 0; i < uniquePaths.length; i++) {
             const path = uniquePaths[i];
             const file = fileMap.get(path);
+            const ext = file.name.toLowerCase().split('.').pop();
             
             try {
-                const jpegBlob = await convertToJpeg(file);
-                const fileName = generateUniqueName(file.name);
-                zip.file(fileName, jpegBlob);
+                // Only convert images, keep videos and other formats as-is
+                const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'];
+                if (imageExts.includes(ext)) {
+                    const jpegBlob = await convertToJpeg(file);
+                    const fileName = generateUniqueName(file.name);
+                    zip.file(fileName, jpegBlob);
+                } else {
+                    // It's a video or other media, keep original
+                    const fileName = generateUniqueName(file.name, true); // keepExt = true
+                    zip.file(fileName, file);
+                }
             } catch (err) {
-                console.error(`Error converting ${path}:`, err);
+                console.error(`Error processing ${path}:`, err);
             }
 
             updateProgress(30 + ((i / uniquePaths.length) * 70));
         }
 
-        statusText.innerText = "Success! Your photos are ready.";
+        statusText.innerText = `Success! Found ${uniquePaths.length} memories.`;
         downloadBtn.style.display = 'block';
     }
 
@@ -842,9 +861,11 @@
     }
 
     let nameCounts = {};
-    function generateUniqueName(name) {
-        let stem = name.split('.').slice(0, -1).join('.') || name;
-        let ext = ".jpg";
+    function generateUniqueName(name, keepExt = false) {
+        let lastDot = name.lastIndexOf('.');
+        let stem = lastDot !== -1 ? name.substring(0, lastDot) : name;
+        let ext = keepExt && lastDot !== -1 ? name.substring(lastDot) : ".jpg";
+        
         if (!nameCounts[stem]) {
             nameCounts[stem] = 1;
             return stem + ext;
